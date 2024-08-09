@@ -1,0 +1,6 @@
+@AuthMEANORM_HostAddress = http://localhost:5069
+
+GET {{AuthMEANORM_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
