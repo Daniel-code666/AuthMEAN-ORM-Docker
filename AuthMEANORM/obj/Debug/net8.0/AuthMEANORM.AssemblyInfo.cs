@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AuthMEANORM")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e41572a4c00ba4c63085fc776bf543a2b8046e7c")]
 [assembly: System.Reflection.AssemblyProductAttribute("AuthMEANORM")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AuthMEANORM")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

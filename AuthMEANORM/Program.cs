@@ -1,5 +1,4 @@
 using AuthMEANORM.Context;
-using AuthMEANORM.Models.UsersModel;
 using AuthMEANORM.Repository.ImplementClass;
 using AuthMEANORM.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;

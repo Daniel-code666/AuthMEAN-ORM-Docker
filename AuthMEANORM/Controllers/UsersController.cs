@@ -4,7 +4,10 @@ using AuthMEANORM.Repository.IRepository;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-
+using AuthMEANORM.Utils;
+using Microsoft.AspNetCore.JsonPatch.Operations;
+using Newtonsoft.Json.Serialization;
+using static AuthMEANORM.Utils.UpdateUserModels;
 
 namespace AuthMEANORM.Controllers
 {
@@ -19,23 +22,34 @@ namespace AuthMEANORM.Controllers
         {
             try
             {
-                var response = new
-                {
-                    StatusCode = "OK",
-                    users = await _usersRepo.GetUsers()
-                };
-
-                return Ok(response);
+                return Ok(new ApiResponse<IEnumerable<Users>>("OK", await _usersRepo.GetUsers()));
             } 
             catch (Exception ex)
             {
-                var errorResponse = new
-                {
-                    StatusCode = "ERROR",
-                    Message = "An error occurred while processing the request."
-                };
+                return StatusCode(500, new ApiResponse<List<string>>(ex.Message, []));
+            }
+        }
 
-                return StatusCode(500, errorResponse);
+        [HttpGet("get_user")]
+        public async Task<IActionResult> GetUser([FromQuery] string id_user)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id_user))
+                {
+                    return StatusCode(400, new ApiResponse<string>("Bad request", ""));
+                }
+
+                if(!await _usersRepo.CheckUserExist(id_user))
+                {
+                    return StatusCode(400, new ApiResponse<string>("User not found", ""));
+                }
+
+                return Ok(new ApiResponse<Users>("OK", await _usersRepo.GetUser(id_user)));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<string>(ex.Message, ""));
             }
         }
 
@@ -46,24 +60,12 @@ namespace AuthMEANORM.Controllers
             {
                 if(!ModelState.IsValid || user == null)
                 {
-                    var errorResponse = new
-                    {
-                        StatusCode = 400,
-                        Message = "BadRequest"
-                    };
-
-                    return StatusCode(400, errorResponse);
+                    return StatusCode(400, new ApiResponse<string>("Bad request", ""));
                 }
 
                 if (!await _usersRepo.CreateUser(user))
                 {
-                    var errorResponse = new
-                    {
-                        StatusCode = 500,
-                        Message = "ERROR"
-                    };
-
-                    return StatusCode(500, errorResponse);
+                    return StatusCode(500, new ApiResponse<string>("Error", ""));
                 }
 
                 var response = new
@@ -76,13 +78,52 @@ namespace AuthMEANORM.Controllers
             }
             catch (Exception ex)
             {
-                var errorResponse = new
-                {
-                    StatusCode = "ERROR",
-                    Message = "An error occurred while processing the request."
-                };
+                return StatusCode(500, new ApiResponse<string>(ex.Message, ""));
+            }
+        }
 
-                return StatusCode(500, errorResponse);
+        [HttpPost("register_user")]
+        public async Task<IActionResult> RegisterUser([FromBody] Users user)
+        {
+            try
+            {
+                if (!ModelState.IsValid || user == null)
+                {
+                    return StatusCode(400, new ApiResponse<string>("Bad request", ""));
+                }
+
+                await _usersRepo.Register(user);
+
+                return Ok(new ApiResponse<string>("Usuario creado", ""));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<string>(ex.Message, ""));
+            }
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginUser user)
+        {
+            try
+            {
+                if (!ModelState.IsValid || user == null)
+                {
+                    return StatusCode(400, new ApiResponse<string>("Bad request", ""));
+                }
+
+                var loggedUser = await _usersRepo.Login(user);
+
+                if (loggedUser == null)
+                {
+                    return StatusCode(404, new ApiResponse<string>("User not found", ""));
+                }
+
+                return Ok(new ApiResponse<Users>("OK", loggedUser));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<string>(ex.Message, ""));
             }
         }
 
@@ -93,101 +134,84 @@ namespace AuthMEANORM.Controllers
             {
                 if (string.IsNullOrWhiteSpace(id_user))
                 {
-                    return BadRequest(new
-                    {
-                        StatusCode = 400,
-                        Message = "BadRequest"
-                    });
+                    return StatusCode(400, new ApiResponse<string>("Bad request", ""));
                 }
 
                 if (!await _usersRepo.CheckUserExist(id_user))
                 {
-                    var errorResponse = new
-                    {
-                        StatusCode = 400,
-                        Message = "User not exists"
-                    };
-
-                    return StatusCode(400, errorResponse);
+                    return StatusCode(404, new ApiResponse<string>("User not found", ""));
                 }
 
                 if(!await _usersRepo.DeleteUserById(id_user))
                 {
-                    var errorResponse = new
-                    {
-                        StatusCode = 500,
-                        Message = "ERROR"
-                    };
-
-                    return StatusCode(500, errorResponse);
+                    return StatusCode(500, new ApiResponse<string>("Error", ""));
                 }
 
-                return Ok(new
-                {
-                    StatusCode = 200,
-                    Message = "User deleted"
-                });
+                return Ok(new ApiResponse<string>("User deleted", ""));
             }
             catch (Exception ex)
             {
-                var errorResponse = new
-                {
-                    StatusCode = "ERROR",
-                    Message = "An error occurred while processing the request."
-                };
-
-                return StatusCode(500, errorResponse);
+                return StatusCode(500, new ApiResponse<string>(ex.Message, ""));
             }
         }
 
         [HttpPatch("update_user")]
-        public async Task<IActionResult> UpdateUser([FromQuery] string id_user, [FromBody] JsonPatchDocument<Users> patchDoc)
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequest request)
         {
             try
             {
-                if (patchDoc == null || string.IsNullOrWhiteSpace(id_user))
+                // Validar si el cuerpo de la solicitud es nulo
+                // Validar el body
+                if (request == null || string.IsNullOrWhiteSpace(request.Identifier) || request.Data == null || !request.Data.Any())
                 {
-                    return BadRequest(new
+                    return StatusCode(400, new ApiResponse<string>("Invalid input", ""));
+                }
+
+                // Verificar si el usuario existe
+                if (!await _usersRepo.CheckUserExistByEmail(request.Identifier))
+                {
+                    return StatusCode(404, new ApiResponse<string>("User not found", ""));
+                }
+
+                // Obtener el usuario por correo electrónico
+                var user = await _usersRepo.GetUserByEmail(request.Identifier);
+                if (user == null)
+                {
+                    return StatusCode(404, new ApiResponse<string>("User not found", ""));
+                }
+
+                // Crear un JsonPatchDocument a partir del `data` recibido
+                var patchDoc = new JsonPatchDocument<Users>();
+                foreach (var operation in request.Data)
+                {
+                    patchDoc.Operations.Add(new Operation<Users>
                     {
-                        StatusCode = 400,
-                        Message = "Invalid input."
+                        op = operation.Op,
+                        path = operation.Path,
+                        value = operation.Value
                     });
                 }
 
-                if (!await _usersRepo.CheckUserExist(id_user))
-                {
-                    var errorResponse = new
-                    {
-                        StatusCode = 400,
-                        Message = "User doesn't exists"
-                    };
-
-                    return StatusCode(400, errorResponse);
-                }
-
-                var user = await _usersRepo.GetUser(id_user);
+                // Aplicar las operaciones al usuario
                 patchDoc.ApplyTo(user, ModelState);
 
-                if (!await _usersRepo.UpdateUser(user!))
+                // Validar el modelo después de aplicar los cambios
+                if (!ModelState.IsValid)
                 {
-                    return StatusCode(500, new
-                    {
-                        StatusCode = 500,
-                        Message = "Failed to update user."
-                    });
+                    return StatusCode(400, new ApiResponse<string>("Invalid patch operation", ""));
                 }
 
-                return StatusCode(200, new { updt_cat = user });
+                // Actualizar el usuario en el repositorio
+                if (!await _usersRepo.UpdateUser(user!))
+                {
+                    return StatusCode(500, new ApiResponse<string>("Error updating user", ""));
+                }
+
+                return Ok(new ApiResponse<Users>("User updated", user!));
             }
             catch (Exception ex)
             {
-                var errorResponse = new
-                {
-                    StatusCode = "ERROR",
-                    Message = "An error occurred while processing the request."
-                };
-
-                return StatusCode(500, errorResponse);
+                return StatusCode(500, new ApiResponse<string>(ex.Message,""));
             }
         }
     }

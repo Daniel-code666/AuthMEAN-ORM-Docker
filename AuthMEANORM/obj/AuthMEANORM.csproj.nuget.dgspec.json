@@ -52,9 +52,13 @@
               "target": "Package",
               "version": "[8.0.7, )"
             },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            },
             "Microsoft.VisualStudio.Azure.Containers.Tools.Targets": {
               "target": "Package",
-              "version": "[1.19.5, )"
+              "version": "[1.21.0, )"
             },
             "MongoDB.EntityFrameworkCore": {
               "target": "Package",
@@ -62,7 +66,15 @@
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
-              "version": "[6.4.0, )"
+              "version": "[6.7.0, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            },
+            "XAct.Core": {
+              "target": "Package",
+              "version": "[1.1.17040.3290, )"
             }
           },
           "imports": [

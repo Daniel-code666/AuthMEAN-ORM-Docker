@@ -8,6 +8,8 @@ namespace AuthMEANORM.Repository.IRepository
 
         Task<Users?> GetUser(string id_user);
 
+        Task<Users?> GetUserByEmail(string email);
+
         Task<bool> CreateUser(Users user);
 
         Task<bool> UpdateUser(Users user);
@@ -16,8 +18,10 @@ namespace AuthMEANORM.Repository.IRepository
 
         Task<bool> CheckUserExist(string id_user);
 
+        Task<bool> CheckUserExistByEmail(string email);
+
         Task<Users> Register(Users user);
 
-        Task<Users> Login(Users user);
+        Task<Users?> Login(LoginUser user);
     }
 }
