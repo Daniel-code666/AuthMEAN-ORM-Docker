@@ -1,11 +1,16 @@
 using AuthMEANORM.Context;
 using AuthMEANORM.Repository.ImplementClass;
 using AuthMEANORM.Repository.IRepository;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connStr = builder.Configuration.GetConnectionString("MongoDb");
+
+var key = builder.Configuration.GetValue<string>("ApiSettings:key");
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options => {
@@ -28,6 +33,28 @@ builder.Services.AddControllers().AddNewtonsoftJson().ConfigureApiBehaviorOption
     o.SuppressInferBindingSourcesForParameters = true;
 });
 
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(x =>
+{
+    x.RequireHttpsMetadata = false;
+    x.SaveToken = true;
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -43,6 +70,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("cors");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

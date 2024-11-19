@@ -8,6 +8,7 @@ using AuthMEANORM.Utils;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Newtonsoft.Json.Serialization;
 using static AuthMEANORM.Utils.UpdateUserModels;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AuthMEANORM.Controllers
 {
@@ -18,6 +19,7 @@ namespace AuthMEANORM.Controllers
         private readonly IUsersRepo _usersRepo = usersRepo;
 
         [HttpGet("get_users")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetUsers()
         {
             try
@@ -31,6 +33,7 @@ namespace AuthMEANORM.Controllers
         }
 
         [HttpGet("get_user")]
+        [Authorize(Roles = "admin, user")]
         public async Task<IActionResult> GetUser([FromQuery] string id_user)
         {
             try
@@ -82,6 +85,7 @@ namespace AuthMEANORM.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("register_user")]
         public async Task<IActionResult> RegisterUser([FromBody] Users user)
         {
@@ -102,6 +106,7 @@ namespace AuthMEANORM.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUser user)
         {
@@ -128,6 +133,7 @@ namespace AuthMEANORM.Controllers
         }
 
         [HttpDelete("delete_user")]
+        [Authorize(Roles = "admin, user")]
         public async Task<IActionResult> DeleteUser([FromQuery] string id_user)
         {
             try
@@ -156,6 +162,7 @@ namespace AuthMEANORM.Controllers
         }
 
         [HttpPatch("update_user")]
+        [Authorize(Roles = "admin, user")]
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequest request)
         {
             try
@@ -202,12 +209,12 @@ namespace AuthMEANORM.Controllers
                 }
 
                 // Actualizar el usuario en el repositorio
-                if (!await _usersRepo.UpdateUser(user!))
+                if (!await _usersRepo.UpdateUser(user))
                 {
                     return StatusCode(500, new ApiResponse<string>("Error updating user", ""));
                 }
 
-                return Ok(new ApiResponse<Users>("User updated", user!));
+                return Ok(new ApiResponse<Users>("User updated", user));
             }
             catch (Exception ex)
             {
